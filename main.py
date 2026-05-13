@@ -1,87 +1,53 @@
 import os
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-from kivy.uix.scrollview import ScrollView
-from kivy.core.window import Window
+import streamlit as st
 import google.generativeai as genai
 
-# UI Theme: Royal Black & Cyan
-Window.clearcolor = (0, 0, 0, 1)
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="JARVIS OMNI-ENGINE", page_icon="🤖", layout="centered")
 
-class JarvisApp(App):
-    def build(self):
-        # API CONFIGURATION
-        # Secrets mein GEMINI_API_KEY hona zaroori hai
-        GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
-        genai.configure(api_key=GEMINI_KEY)
-        
-        # --- FIXED MODEL INITIALIZATION ---
-        # Explicitly using gemini-1.5-flash which is widely supported
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+# --- UI STYLE (Royal Cyan & Black) ---
+st.markdown("""
+    <style>
+    .stApp { background-color: #000000; color: #00d4ff; }
+    .stTextInput > div > div > input { background-color: #111; color: #00d4ff; border: 1px solid #00d4ff; border-radius: 10px; }
+    .stButton > button { background-color: #00d4ff; color: black; border-radius: 50px; width: 100%; font-weight: bold; border: none; }
+    .stButton > button:hover { background-color: white; color: black; box-shadow: 0 0 20px #00d4ff; }
+    .chat-box { border: 1px solid #222; padding: 20px; border-radius: 15px; background: rgba(0, 212, 255, 0.05); }
+    </style>
+    """, unsafe_allow_index=True)
 
-        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
+# --- API CONFIG ---
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
+genai.configure(api_key=GEMINI_KEY)
 
-        # Header: JARVIS OMNI-ENGINE
-        self.header = Label(
-            text="[b][color=00d4ff]JARVIS OMNI-ENGINE V64[/color][/b]",
-            markup=True, font_size='24sp', size_hint_y=0.1
-        )
-        self.layout.add_widget(self.header)
+# --- MODEL INITIALIZATION (FIXED) ---
+# Direct access to the stable version to avoid 404
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
-        # Chat Window
-        self.scroll = ScrollView(size_hint_y=0.6)
-        self.output = Label(
-            text="Neural Link Active. Ready for your command, Sir.",
-            text_size=(Window.width - 40, None),
-            halign='left', valign='top',
-            color=(0, 0.83, 1, 1),
-            markup=True
-        )
-        self.output.bind(texture_size=self.output.setter('size'))
-        self.scroll.add_widget(self.output)
-        self.layout.add_widget(self.scroll)
+# --- UI HEADER ---
+st.markdown("<h1 style='text-align: center; color: #00d4ff;'>🤖 JARVIS OMNI-ENGINE</h1>", unsafe_allow_index=True)
+st.markdown("<p style='text-align: center; color: #666;'>USER: DILANSH JAIN | STATUS: NEURAL LINK ACTIVE</p>", unsafe_allow_index=True)
 
-        # User Input Field
-        self.user_input = TextInput(
-            hint_text="Ask me anything, Sir...",
-            multiline=False, size_hint_y=0.1,
-            background_color=(0.1, 0.1, 0.1, 1),
-            foreground_color=(1, 1, 1, 1),
-            cursor_color=(0, 0.83, 1, 1)
-        )
-        self.layout.add_widget(self.user_input)
+# --- CHAT LOGIC ---
+if 'history' not in st.session_state:
+    st.session_state.history = []
 
-        # Action Button
-        self.btn = Button(
-            text="ACTIVATE BRAIN LINK", 
-            size_hint_y=0.15,
-            background_color=(0, 0.5, 0.7, 1),
-            font_size='18sp',
-            bold=True
-        )
-        self.btn.bind(on_press=self.process_command)
-        self.layout.add_widget(self.btn)
+user_input = st.text_input("Command me, Sir...", key="input")
 
-        return self.layout
-
-    def process_command(self, instance):
-        query = self.user_input.text
-        if query:
-            self.output.text += f"\n\n[color=ffffff][You]:[/color] {query}"
-            self.user_input.text = ""
+if st.button("BRAIN LINK"):
+    if user_input:
+        try:
+            # JARVIS Personality Layer
+            prompt = f"Role: You are JARVIS, the loyal and smart AI for Dilansh Jain. Mood: Royal. Context: Tonk, Rajasthan. Task: {user_input}"
+            response = model.generate_content(prompt)
             
-            try:
-                # Roleplay for Dilansh Jain from Tonk
-                response = self.model.generate_content(
-                    f"System: You are JARVIS. Owner: Dilansh Jain. Mood: Loyal. Query: {query}"
-                )
-                self.output.text += f"\n\n[color=00d4ff][Jarvis]:[/color] {response.text}"
-            except Exception as e:
-                # Fallback for common 404/Version errors
-                self.output.text += f"\n\n[color=ff4444][System Error]:[/color] Sir, the link failed. Try updating the API key or model name."
+            # Save to history
+            st.session_state.history.append({"user": user_input, "jarvis": response.text})
+        except Exception as e:
+            st.error(f"Sir, connection failed: {str(e)}")
 
-if __name__ == "__main__":
-    JarvisApp().run()
+# --- DISPLAY CHAT ---
+st.markdown("---")
+for chat in reversed(st.session_state.history):
+    st.markdown(f"<div class='chat-box'><b>You:</b> {chat['user']}<br><br><b style='color: #00d4ff;'>Jarvis:</b> {chat['jarvis']}</div>", unsafe_allow_index=True)
+    st.markdown("<br>", unsafe_allow_index=True)
