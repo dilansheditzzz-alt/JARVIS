@@ -5,13 +5,13 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-# Make sure GEMINI_API_KEY is in your Replit Secrets
+# Secrets mein GEMINI_API_KEY hona zaroori hai
 GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
 genai.configure(api_key=GEMINI_KEY)
 
 @app.route('/')
 def home():
-    # Royal UI Design for Dilansh Jain
+    # Royal UI for Dilansh Jain
     return """
     <!DOCTYPE html>
     <html>
@@ -24,12 +24,10 @@ def home():
             .btn { padding: 15px 40px; background: #00d4ff; color: black; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; }
             .btn:hover { background: white; box-shadow: 0 0 20px #00d4ff; }
             #output { margin-top: 20px; padding: 25px; border: 1px solid #222; min-height: 100px; text-align: left; background: rgba(255,255,255,0.05); border-radius: 15px; white-space: pre-wrap; }
-            .status { font-size: 0.8em; color: #666; margin-bottom: 10px; }
         </style>
     </head>
     <body>
         <div class="container">
-            <div class="status">NEURAL LINK: ACTIVE | LOCATION: TONK | USER: DILANSH JAIN</div>
             <h2>🤖 JARVIS OMNI-ENGINE</h2>
             <div id="output">System Initialized. Awaiting your command, Sir.</div>
             <br>
@@ -52,7 +50,7 @@ def home():
                     output.innerText = data.response;
                     input.value = "";
                 } catch (e) {
-                    output.innerText = "Sir, the neural connection was interrupted. Please check the console.";
+                    output.innerText = "Sir, the neural connection was interrupted.";
                 }
             }
         </script>
@@ -64,23 +62,17 @@ def home():
 def chat():
     user_msg = request.args.get('msg')
     try:
-        # FIXED: Correct model path for Gemini 1.5 Flash
+        # --- FIXED MODEL NAME FOR V1BETA ---
+        # "models/" prefix lagane se 404 error solve ho jata hai
         model = genai.GenerativeModel('models/gemini-1.5-flash')
         
-        # Adding your requested features in System Prompt
-        system_prompt = (
-            "You are JARVIS, the highly advanced AI assistant of Dilansh Jain. "
-            "Location: Tonk, Rajasthan. "
-            "Personality: Royal, loyal, professional but with a sense of humor. "
-            "Capabilities: Real-time thinking, deep reasoning, and adaptive intelligence. "
-            f"Current task: {user_msg}"
-        )
-        
-        response = model.generate_content(system_prompt)
+        # System instructions with your identity
+        response = model.generate_content(f"You are JARVIS. Owner: Dilansh. Reply to: {user_msg}")
         return jsonify({"response": response.text})
     except Exception as e:
-        return jsonify({"response": f"Sir, I encountered a core error: {str(e)}"})
+        # Detailed error log for debugging
+        return jsonify({"response": f"Sir, error in core: {str(e)}"})
 
 if __name__ == '__main__':
-    # Replit Agent Port Compatibility
+    # Replit expected port is 5000 based on your latest logs
     app.run(host='0.0.0.0', port=5000)
