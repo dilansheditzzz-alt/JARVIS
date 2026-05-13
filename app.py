@@ -1,66 +1,94 @@
 import os
+import base64
+import requests
 from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
-import requests
-import base64
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
-# --- API CONFIG ---
-# Ye keys hum Replit ke 'Secrets' mein daalenge
-GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
-STABILITY_KEY = os.environ.get('STABILITY_API_KEY')
+# --- 1. CORE ENGINE CONFIG (AI BRAIN) ---
+GEMINI_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyDB5QbDVJSrurd0G7lXUHRZVpRPqxSdv8c')
+STABILITY_KEY = os.environ.get('STABILITY_API_KEY', 'sk-dBrp8z3MiVb03Qt5NooKENix0ljoo1I8fC0tgMPBZiU2MjYh')
 
 genai.configure(api_key=GEMINI_KEY)
 
+# Short-term Memory (Context Understanding)
+chat_history = []
+
+# --- 2. JARVIS MODES & INTELLIGENCE ---
+def get_jarvis_response(user_input, image_data=None):
+    # Model Fix: models/ prefix added to solve 404 error
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    
+    # Context/Memory Management
+    context = f"System: Jarvis. Owner: Dilansh Jain. Location: Tonk. History: {chat_history[-5:]}\n"
+    full_prompt = f"{context} User: {user_input}"
+    
+    if image_data:
+        img = Image.open(io.BytesIO(base64.b64decode(image_data)))
+        response = model.generate_content([full_prompt, img])
+    else:
+        response = model.generate_content(full_prompt)
+    
+    chat_history.append({"user": user_input, "jarvis": response.text})
+    return response.text
+
+# --- 3. WEB INTERFACE (ROYAL GLASSMORPHISM) ---
 @app.route('/')
 def home():
     return """
     <!DOCTYPE html>
-    <html lang="en">
+    <html>
     <head>
-        <title>JARVIS V64 PRO</title>
+        <title>JARVIS V64 OMNI-ENGINE</title>
         <style>
-            body { background: radial-gradient(circle, #021B79, #000); color: #00d4ff; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 50px; }
-            .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(0, 212, 255, 0.2); padding: 40px; width: 70%; margin: auto; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8); }
-            input { width: 80%; padding: 15px; border-radius: 10px; border: 1px solid #00d4ff; background: rgba(0,0,0,0.5); color: white; margin-bottom: 20px; outline: none; }
-            .btn { padding: 15px 30px; border-radius: 50px; border: none; background: #00d4ff; color: #021B79; font-weight: bold; cursor: pointer; transition: 0.3s; margin: 10px; text-transform: uppercase; }
-            .btn:hover { box-shadow: 0 0 20px #00d4ff; transform: scale(1.05); }
-            #status { color: #64ffda; font-weight: lighter; margin-bottom: 20px; }
-            #response { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px; min-height: 50px; line-height: 1.6; }
-            img { border-radius: 15px; margin-top: 20px; border: 2px solid #00d4ff; max-width: 100%; }
+            body { background: radial-gradient(circle, #001f3f, #000); color: #00d4ff; font-family: 'Orbitron', sans-serif; margin: 0; padding: 20px; }
+            .jarvis-ui { border: 2px solid #00d4ff; border-radius: 30px; padding: 20px; background: rgba(0,0,0,0.8); box-shadow: 0 0 50px rgba(0, 212, 255, 0.2); max-width: 900px; margin: auto; }
+            .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+            .status-bar { border-bottom: 1px solid #00d4ff; padding: 10px; display: flex; justify-content: space-between; font-size: 12px; }
+            textarea { width: 95%; background: transparent; border: 1px solid #00d4ff; color: white; border-radius: 10px; padding: 15px; margin-top: 20px; }
+            .btn { background: #00d4ff; color: black; border: none; padding: 15px; border-radius: 50px; font-weight: bold; cursor: pointer; transition: 0.5s; width: 100%; margin-top: 10px; }
+            .btn:hover { box-shadow: 0 0 20px white; background: white; }
+            #output { border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin-top: 20px; min-height: 100px; background: rgba(255,255,255,0.05); text-align: left; }
+            img { width: 100%; border-radius: 15px; margin-top: 10px; }
         </style>
     </head>
     <body>
-        <div class="glass-card">
-            <h1>🤖 JARVIS V64 PRO</h1>
-            <div id="status">Neural Link: Connected</div>
-            <input type="text" id="command" placeholder="Enter command for Jarvis, Sir Dilansh...">
-            <br>
-            <button class="btn" onclick="askJarvis()">Analyze</button>
-            <button class="btn" onclick="generateArt()">Synthesize Art</button>
-            <div id="response">Waiting for command...</div>
-            <div id="art-box"></div>
+        <div class="jarvis-ui">
+            <div class="status-bar">
+                <span>SYSTEM: V64.0.1 ALPHA</span>
+                <span>CORE: GEMINI-PRO-FLASH</span>
+                <span>STATUS: NEURAL LINK ACTIVE</span>
+            </div>
+            <h1>🤖 JARVIS OMNI-ENGINE</h1>
+            <div id="output">Welcome back, Sir Dilansh. All systems are nominal. Ready for command...</div>
+            <div id="art-display"></div>
+            
+            <textarea id="cmd" placeholder="Speak or Type: 'Scan this image', 'Generate a royal car', 'Control lights'..."></textarea>
+            
+            <div class="feature-grid">
+                <button class="btn" onclick="execute('chat')">🧠 BRAIN LINK</button>
+                <button class="btn" onclick="execute('art')">🎨 ART SYNTH</button>
+                <button class="btn" onclick="execute('vision')">👁️ VISION SCAN</button>
+            </div>
         </div>
 
         <script>
-            async function askJarvis() {
-                const cmd = document.getElementById('command').value;
-                document.getElementById('response').innerText = "Thinking...";
-                const res = await fetch('/chat?msg=' + encodeURIComponent(cmd));
+            async function execute(mode) {
+                const cmd = document.getElementById('cmd').value;
+                const out = document.getElementById('output');
+                out.innerText = "Processing through Neural Layers...";
+                
+                let endpoint = mode === 'chat' ? '/chat' : '/art';
+                const res = await fetch(`${endpoint}?msg=${encodeURIComponent(cmd)}`);
                 const data = await res.json();
-                document.getElementById('response').innerText = data.response;
-            }
-            async function generateArt() {
-                const cmd = document.getElementById('command').value;
-                document.getElementById('response').innerText = "Generating Art...";
-                const res = await fetch('/art?msg=' + encodeURIComponent(cmd));
-                const data = await res.json();
+                
+                if(data.response) out.innerText = data.response;
                 if(data.image) {
-                    document.getElementById('art-box').innerHTML = `<img src="data:image/png;base64,${data.image}">`;
-                    document.getElementById('response').innerText = "Art successfully synthesized.";
-                } else {
-                    document.getElementById('response').innerText = "Error in Art Engine.";
+                    document.getElementById('art-display').innerHTML = `<img src="data:image/png;base64,${data.image}">`;
+                    out.innerText = "Visualization complete, Sir.";
                 }
             }
         </script>
@@ -68,12 +96,12 @@ def home():
     </html>
     """
 
+# --- 4. API ROUTES (THE CORE) ---
 @app.route('/chat')
 def chat():
     msg = request.args.get('msg')
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content(f"Respond as Jarvis to Dilansh: {msg}")
-    return jsonify({"response": response.text})
+    response = get_jarvis_response(msg)
+    return jsonify({"response": response})
 
 @app.route('/art')
 def art():
@@ -84,7 +112,7 @@ def art():
     res = requests.post(url, headers=headers, json=body)
     if res.status_code == 200:
         return jsonify({"image": res.json()["artifacts"][0]["base64"]})
-    return jsonify({"error": "Art engine failed"}), 400
+    return jsonify({"error": "Failed"}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
