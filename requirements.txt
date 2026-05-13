@@ -1,4 +1,5 @@
-streamlit
+flask
 google-generativeai
-Pillow
 requests
+Pillow
+gTTS
