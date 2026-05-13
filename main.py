@@ -14,12 +14,13 @@ Window.clearcolor = (0, 0, 0, 1)
 class JarvisApp(App):
     def build(self):
         # API CONFIGURATION
+        # Secrets mein GEMINI_API_KEY hona zaroori hai
         GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
         genai.configure(api_key=GEMINI_KEY)
         
         # --- FIXED MODEL INITIALIZATION ---
-        # "models/" prefix is mandatory to avoid 404
-        self.model = genai.GenerativeModel('models/gemini-1.5-flash')
+        # Explicitly using gemini-1.5-flash which is widely supported
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
 
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
 
@@ -73,14 +74,14 @@ class JarvisApp(App):
             self.user_input.text = ""
             
             try:
-                # Character Roleplay for Dilansh Jain
+                # Roleplay for Dilansh Jain from Tonk
                 response = self.model.generate_content(
-                    f"System: JARVIS. Owner: Dilansh Jain. Instruction: Respond as a royal AI. Query: {query}"
+                    f"System: You are JARVIS. Owner: Dilansh Jain. Mood: Loyal. Query: {query}"
                 )
                 self.output.text += f"\n\n[color=00d4ff][Jarvis]:[/color] {response.text}"
             except Exception as e:
-                # Error Handling to prevent crash
-                self.output.text += f"\n\n[color=ff4444][System Error]:[/color] Sir, the link failed: {str(e)}"
+                # Fallback for common 404/Version errors
+                self.output.text += f"\n\n[color=ff4444][System Error]:[/color] Sir, the link failed. Try updating the API key or model name."
 
 if __name__ == "__main__":
     JarvisApp().run()
