@@ -115,4 +115,5 @@ def art():
     return jsonify({"error": "Failed"}), 400
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    # Forcefully use port 5000 for Replit Agent compatibility
+    app.run(host='0.0.0.0', port=5000)
